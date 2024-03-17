@@ -105,6 +105,55 @@ def apply_rotary_emb(x: torch.Tensor, freqs_cis: torch.Tensor) -> torch.Tensor:
 
 
 class Linear(nn.Module):
+    
+    # Each "neuron" needs to have a threshold value that can be used to calculate if it fired or not
+
+    # Since we aren't using action potentials
+    # "fire" means that they would have fired if we had imposed a threshold
+    # fired = incoming * weight > threshold
+
+    # Each forward pass needs additional information:
+    # - the loss
+    # - whether this is a inference pass or an update pass
+
+    # On each update pass:
+    # - Each "neuron" needs to determine which connecting neurons in the next layer "fired."
+    # For example if a neuron connects to 8 neurons in the next layer:
+    #    - Result was correct. Current neuron fired,
+    #    in next layer 6 fired, 2 didn't (re: firing bool).
+    #    Weight should be increased by (6 / 2) * learning rate.
+    #    Threshold should decrease by loss * learning rate.
+    #    - Result was correct. Current neuron fired,
+    #    in next layer 2 fired, 6 didn't (re: firing bool).
+    #    Weight should be increased by (2 / 6) * learning rate.
+    #    Threshold should decrease by loss * learning rate.
+
+    #    - Result was correct. Current neuron DID NOT fire,
+    #    in next layer 6 fired, 2 didn't (re: firing bool).
+    #    Weight should be DECREASED by (6 / 2) * learning rate.
+    #    Threshold should increase by loss * learning rate.
+    #    - Result was positive (correct answer). Current neuron DID NOT fire,
+    #    in next layer 2 fired, 6 didn't (re: firing bool).
+    #    Weight should be DECREASED by (2 / 6) * learning rate.
+    #    Threshold should increase by loss * learning rate.
+
+    #    - Result was WRONG. Current neuron fired,
+    #    in next layer 6 fired, 2 didn't (re: firing bool).
+    #    Weight should be DECREASED by (6 / 2) * learning rate.
+    #    Threshold should increase by loss * learning rate.
+    #    - Result was WRONG. Current neuron fired,
+    #    in next layer 2 fired, 6 didn't (re: firing bool).
+    #    Weight should be DECREASED by (2 / 6) * learning rate.
+    #    Threshold should increase by loss * learning rate.
+
+    #    - Result was WRONG. Current neuron DID NOT fire,
+    #    in next layer 6 fired, 2 didn't (re: firing bool).
+    #    Weight should be increased by (6 / 2) * learning rate.
+    #    Threshold should decrease by loss * learning rate.
+    #    - Result was WRONG. Current neuron fired,
+    #    in next layer 2 fired, 6 didn't (re: firing bool).
+    #    Weight should be DECREASED by (2 / 6) * learning rate.
+    #    Threshold should increase by loss * learning rate.
 
     def __init__(self, in_features: int, out_features: int, quant: bool):
         super().__init__()
