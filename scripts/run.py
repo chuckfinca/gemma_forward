@@ -62,7 +62,7 @@ def main(args):
     print('======================================')
 
 
-class HyperParameters:
+class Arguments:
     ckpt: str  # Replace with your desired path or value
     variant: str  # Can be either "2b" or "7b"
     device: str  # Can be either "cpu" or "cuda"
@@ -91,7 +91,7 @@ class HyperParameters:
 
 
 if __name__ == "__main__":
-    params = HyperParameters(ckpt='', variant='2b', device='cpu', output_len=10, seed=47, quant=False, prompt="The meaning of life is", tokenizer='tokenizer.model')
+    params = Arguments(ckpt='', variant='2b', device='cpu', output_len=100, seed=47, quant=False, prompt="The meaning of life is", tokenizer='tokenizer.model')
 
     # Load model weights
     weights_dir = kagglehub.model_download(f'google/gemma/pyTorch/{params.variant}')
