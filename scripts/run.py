@@ -13,8 +13,10 @@
 # limitations under the License.
 import argparse
 import contextlib
+import os
 import random
 
+import kagglehub as kagglehub
 import numpy as np
 import torch
 
@@ -35,6 +37,7 @@ def main(args):
     model_config = config.get_model_config(args.variant)
     model_config.dtype = "float32" if args.device == "cpu" else "float16"
     model_config.quant = args.quant
+    model_config.tokenizer = args.tokenizer
 
     # Seed random.
     random.seed(args.seed)
@@ -59,21 +62,50 @@ def main(args):
     print('======================================')
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--ckpt", type=str, required=True)
-    parser.add_argument("--variant",
-                        type=str,
-                        default="2b",
-                        choices=["2b", "7b"])
-    parser.add_argument("--device",
-                        type=str,
-                        default="cpu",
-                        choices=["cpu", "cuda"])
-    parser.add_argument("--output_len", type=int, default=100)
-    parser.add_argument("--seed", type=int, default=12345)
-    parser.add_argument("--quant", action='store_true')
-    parser.add_argument("--prompt", type=str, default="The meaning of life is")
-    args = parser.parse_args()
+class HyperParameters:
+    ckpt: str  # Replace with your desired path or value
+    variant: str  # Can be either "2b" or "7b"
+    device: str  # Can be either "cpu" or "cuda"
+    output_len: int
+    seed: int
+    quant: bool  # Set to True if you want to enable quantization
+    prompt: str  # e.g. "The meaning of life is"
+    tokenizer: str # path to tokenizer
 
-    main(args)
+    def __init__(self, ckpt, variant="2b", device="cpu", output_len=100, seed=47, quant=False, prompt="The meaning of life is", tokenizer='tokenizer.model'):
+
+        # You can add checks for 'choices' if needed
+        if variant not in ['2b', '2b-it', '7b', '7b-it', '7b-quant', '7b-it-quant']:
+            raise ValueError("Invalid value for 'variant'. Choose between '2b' and '7b'")
+        if device not in ["cpu", "cuda"]:
+            raise ValueError("Invalid value for 'device'. Choose between 'cpu' and 'cuda'")
+
+        self.ckpt = ckpt
+        self.variant = variant
+        self.device = device
+        self.output_len = output_len
+        self.seed = seed
+        self.quant = quant
+        self.prompt = prompt
+        self.tokenizer = tokenizer
+
+
+if __name__ == "__main__":
+    params = HyperParameters(ckpt='', variant='2b', device='cpu', output_len=10, seed=47, quant=False, prompt="The meaning of life is", tokenizer='tokenizer.model')
+
+    # Load model weights
+    weights_dir = kagglehub.model_download(f'google/gemma/pyTorch/{params.variant}')
+
+    # Ensure that the tokenizer is present
+    tokenizer_path = os.path.join(weights_dir, 'tokenizer.model')
+    print(f"tokenizer_path: {tokenizer_path}")
+    assert os.path.isfile(tokenizer_path), 'Tokenizer not found!'
+    params.tokenizer = tokenizer_path
+
+    # Ensure that the checkpoint is present
+    ckpt_path = os.path.join(weights_dir, f'gemma-{params.variant}.ckpt')
+    print(f"ckpt_path: {ckpt_path}")
+    assert os.path.isfile(ckpt_path), 'PyTorch checkpoint not found!'
+    params.ckpt = ckpt_path
+
+    main(params)
